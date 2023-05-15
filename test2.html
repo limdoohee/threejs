@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+    </head>
+    <body>
+        <div class="wrapper"></div>
+        <script type="module">
+            import * as THREE from "three";
+            import HexagonPillar from "./oito/geometry/HexagonPillar.js";
+            import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+            import { MapControls } from "three/addons/controls/MapControls.js";
+            import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+
+            const scene = new THREE.Scene();
+            let camera = null;
+            let renderer = null;
+            let controls = null;
+            let posArray = [];
+            // const layout = new Layout(1);
+
+            const loader = new FBXLoader();
+            let mixer = new THREE.AnimationMixer();
+            let clock = new THREE.Clock();
+
+            init();
+            ground();
+            hexaGrid(1);
+            setAvatar();
+            // setDrop();
+            render();
+
+            scene.add(new THREE.GridHelper(20, 20, 0xff80ed, 0x444444));
+
+            function init() {
+                // renderer
+                renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.querySelector(".wrapper").appendChild(renderer.domElement);
+
+                // camera
+                camera = new THREE.PerspectiveCamera(13, window.innerWidth / window.innerHeight, 0.01, 1000);
+                camera.position.set(0, 38, 30);
+                // camera.position.x = 0;
+                // camera.position.y = 1;
+                // camera.position.x = 1.8;
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+                // camera.update();
+
+                // light
+                let light = new THREE.DirectionalLight(0xffffff, 1);
+                light.position.set(5, 5, 5);
+                light.castShadow = true;
+                light.shadow.mapSize.width = 1042;
+                light.shadow.mapSize.height = 1042;
+                scene.add(light);
+                scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+                scene.add(new THREE.DirectionalLightHelper(light, 1, "red"));
+
+                // controls
+                controls = new OrbitControls(camera, renderer.domElement);
+                controls.target.fromArray([0, 0, 0]);
+                controls.update();
+
+                window.addEventListener("click", clickEvent);
+            }
+
+            function ground() {
+                const geo = new THREE.PlaneGeometry(20, 20);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: "#E6F5C6",
+                    side: THREE.DoubleSide,
+                    opacity: 0.5,
+                    transparent: true,
+                });
+                // shadow blur
+                //https://github.com/mrdoob/three.js/blob/master/examples/webgl_shadow_contact.html
+
+                const ground = new THREE.Mesh(geo, mat);
+                ground.rotation.x = Math.PI * 0.5;
+                ground.receiveShadow = true;
+                scene.add(ground);
+            }
+
+            function hexaGrid(n) {
+                const VERT_SRC = `#version 300 es
+                                                in vec3 position;
+                                                in vec3 normal;
+                                                in vec3 i_pos;
+
+                                                uniform mat4 viewMatrix;
+                                                uniform mat3 normalMatrix;
+                                                uniform mat4 projectionMatrix;
+
+                                                out vec3 frag_wpos;
+                                                out vec3 frag_norm;
+                                                out vec3 frag_color;
+
+                                                ///////////////////////////////////////////////////////////////////////////////
+
+                                                uniform int   UOctave;//       = 2;
+                                                uniform float UPeriod;//       = 0.3;
+                                                uniform float UPeriodFreq;//   = 2.0;
+                                                uniform float UFalloff;//      = 2.0;
+                                                uniform float UVox;//          = 0.0;
+
+                                                ///////////////////////////////////////////////////////////////////////////////
+
+                                                vec3 rgb( int c ){
+                                                    return vec3(
+                                                        float( ( c >> 16 ) & 0xff ) * 0.003,
+                                                        float( ( c >> 8 ) & 0xff ) * 0.003,
+                                                        float( c & 0xff ) * 0.003
+                                                    );
+                                                }
+
+                                                ///////////////////////////////////////////////////////////////////////////////
+
+                                                void main(){
+                                                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                                                    // HEIGHT MAP
+                                                    vec3 pos = position;
+                                                    pos += i_pos;                                                   // Move to Instanced Position
+
+                                                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                                                    // RESULTS
+                                                    vec4 ws_pos	= vec4( pos, 1.0 );
+
+                                                    frag_wpos   = ws_pos.xyz;
+                                                    frag_norm   = normalMatrix * normal;
+                                                    frag_color  = rgb(0xffff00);
+
+                                                    gl_Position	= projectionMatrix * viewMatrix * vec4( pos, 1.0 );
+                                                }
+                                                `;
+
+                const FRAG_SRC = `#version 300 es
+                                            precision mediump float;
+
+                                            out vec4 out_color;
+
+                                            in vec3 frag_wpos;
+                                            in vec3 frag_norm;
+                                            in vec3 frag_color;
+
+                                            uniform vec3 cameraPosition;
+                                            uniform vec3 color;
+
+                                            ///////////////////////////////////////////////////////////////////////////////
+
+                                            #define RECIPROCAL_PI 0.3183098861837907
+                                            #define saturate( a ) clamp( a, 0.0, 1.0 )
+
+                                            vec3 F_Schlick( const in vec3 f0, const in float f90, const in float dotVH ) {
+                                                float fresnel = exp2( ( - 5.55473 * dotVH - 6.98316 ) * dotVH );
+                                                return f0 * ( 1.0 - fresnel ) + ( f90 * fresnel );
+                                            }
+
+                                            float D_BlinnPhong( const in float shininess, const in float dotNH ) {
+                                                return RECIPROCAL_PI * ( shininess * 0.5 + 1.0 ) * pow( dotNH, shininess );
+                                            }
+
+                                            vec3 BRDF_Lambert( const in vec3 diffuseColor ){ return RECIPROCAL_PI * diffuseColor; }
+
+                                            vec3 BRDF_BlinnPhong( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float shininess ) {
+                                                vec3 halfDir    = normalize( lightDir + viewDir );
+                                                float dotNH     = saturate( dot( normal, halfDir ) );
+                                                float dotVH     = saturate( dot( viewDir, halfDir ) );
+                                                vec3 F          = F_Schlick( specularColor, 1.0, dotVH );
+                                                float G         = 0.25; // It only outputs a constant - G_BlinnPhong_Implicit();
+                                                float D         = D_BlinnPhong( shininess, dotNH );
+
+                                                //return F * ( G * D );
+                                                return F * G; // D Causes the big Spot light kind of thing to appear
+                                            }
+
+                                            ///////////////////////////////////////////////////////////////////////////////
+
+                                            void main(){
+                                                // STRIPPED DOWN MeshPhongMaterial ( Prob screwed up somewhere )
+
+                                                vec3 baseColor          = frag_color; //color;
+
+                                                vec3 lightPos           = vec3( 0.0, 10.0, 6.0 );
+                                                vec3 lightColor         = vec3( 1.0 );
+                                                vec3 lightDir           = normalize( lightPos - frag_wpos );
+
+                                                vec3  viewDir           = normalize( cameraPosition - frag_wpos );
+                                                vec3  norm              = normalize( frag_norm );
+                                                float dotNL             = saturate( dot( norm, lightDir ) );
+
+                                                vec3 indirectDiffuse    = vec3( 0.1 );
+                                                vec3 directDiffuse      = vec3( 0.0 );
+                                                vec3 directSpecular     = vec3( 0.0 );
+
+                                                vec3 specularColor      = vec3( 1.0 );
+                                                float specularShininess = 400.0;
+                                                float specularStrength  = 1.0;
+
+                                                vec3 ambientLightColor  = vec3( 2.5 );
+                                                vec3 irradiance         = dotNL * lightColor;
+
+                                                directDiffuse           += irradiance * BRDF_Lambert( baseColor );
+                                                directSpecular          += irradiance * BRDF_BlinnPhong( lightDir, viewDir, norm, specularColor, specularShininess ) * specularStrength;
+                                                indirectDiffuse         += ambientLightColor * BRDF_Lambert( baseColor );
+
+                                                out_color.rgb           = directDiffuse + indirectDiffuse + directSpecular;
+                                                out_color.a             = 1.0;
+
+                                            }`;
+                let x, y, yn, p;
+
+                const geo = HexagonPillar.get(false, 1, 0.03, 1, 0.07, 0.5);
+
+                const mat = new THREE.RawShaderMaterial({
+                    vertexShader: VERT_SRC,
+                    fragmentShader: FRAG_SRC,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    // wireframe: true,
+                });
+
+                const SQRT3 = Math.sqrt(3.0);
+                const axialToPixel = (ax, ay) => {
+                    const x = 1.5 * ax + 0 * ay;
+                    const y = (SQRT3 / 2.0) * ax + SQRT3 * ay;
+
+                    return [x, y];
+                };
+
+                for (x = -n; x <= n; x++) {
+                    y = Math.max(-n, -x - n);
+                    yn = Math.min(n, -x + n);
+
+                    for (y; y <= yn; y++) {
+                        p = axialToPixel(x, y);
+                        // console.log(x, y, p);
+                        const coord = [];
+                        const pos = [];
+                        pos.push(p[0], 0, p[1]);
+                        // posArray.push(p[0], 0, p[1]);
+                        // pos.push(-1.5, 0, -0.8660254037844386);
+                        // coord.push(-1, 0, -1, 1);
+                        // console.log(pos, coord);
+
+                        //-1.5, 0, -0.8660254037844386
+                        //, -1.5, 0, 0.8660254037844386
+                        //, 0, 0, -1.7320508075688772
+                        //, 0, 0, 0
+                        //, 0, 0, 1.7320508075688772
+                        //, 1.5, 0, -0.8660254037844386
+                        //, 1.5, 0, 0.8660254037844386
+                        // -1, 0, -1, 1, 0, -1, 0, 0, 0, 1, 1, -1, 1, 0
+
+                        const inst_pos = new Float32Array(pos);
+
+                        console.log(inst_pos);
+                        // console.log(geo.vertices);
+                        const bGeo = new THREE.BufferGeometry();
+                        bGeo.setIndex(geo.indices);
+                        bGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(geo.vertices), 3));
+                        bGeo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(geo.normals), 3));
+                        bGeo.setAttribute("i_pos", new THREE.InstancedBufferAttribute(inst_pos, 3));
+                        const material = new THREE.MeshStandardMaterial({ color: 0x004fff });
+
+                        let mesh = new THREE.Mesh(bGeo, mat);
+                        mesh.name = "ground";
+                        mesh.castShadow = true;
+                        mesh.receiveShadow = true;
+
+                        scene.add(mesh);
+                    }
+                }
+                // console.log(posArray);
+            }
+
+            function setAvatar() {
+                loader.load("data/Standing Greeting.fbx", (object) => {
+                    object.scale.multiplyScalar(0.015);
+                    object.position.set(-2, 0, -4);
+
+                    mixer = new THREE.AnimationMixer(object);
+                    const action = mixer.clipAction(object.animations[0]);
+                    action.play();
+                    object.name = "avatar";
+                    scene.add(object);
+
+                    clock = new THREE.Clock();
+                });
+            }
+
+            function setDrop() {
+                const temp_drops = [{ url: "data/coin.fbx" }];
+                // temp_drops.forEach((drop, dropInd) => {
+                //     loader.load(drop.url, (object) => {
+                //         object.scale.multiplyScalar(0.03);
+                //         object.position.set(hexaCore[dropInd].position.x, hexaCore[dropInd].position.y + 4, hexaCore[dropInd].position.z);
+                //         object.name = "drop" + dropInd;
+                //         scene.add(object);
+
+                //         clock = new THREE.Clock();
+                //     });
+
+                // });
+
+                for (let i = 0; i < 30; i++) {
+                    loader.load("data/Tree low.FBX", (object) => {
+                        object.castShadow = true;
+                        object.receiveShadow = true;
+
+                        object.scale.multiplyScalar(0.01);
+                        object.position.set(posArray[3 * i], 0.2, posArray[3 * i + 2]);
+                        // console.log();
+                        object.name = "drop" + i;
+
+                        object.traverse(function (child) {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        object.name = "drop" + i;
+
+                        scene.add(object);
+
+                        // clock = new THREE.Clock();
+                    });
+                }
+            }
+
+            function animate() {
+                const delta = clock.getDelta();
+                if (mixer) mixer.update(delta);
+            }
+
+            function render() {
+                animate();
+                requestAnimationFrame(render);
+                renderer.render(scene, camera);
+            }
+
+            let parentName;
+            function clickEvent(event) {
+                let parentName;
+                const raycaster = new THREE.Raycaster();
+                const pointer = new THREE.Vector2();
+
+                pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+                pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(pointer, camera);
+
+                const intersects = raycaster.intersectObjects(scene.children);
+
+                // console.log(scene.children, intersects, intersects[0]);
+                if (intersects.length > 0) {
+                    parentName = intersects[0].object.parent.name;
+                    for (let i = 0; i < intersects.length; i++) {
+                        if (parentName === "avatar") {
+                            intersects[i].object.material.color.set(0x141d80);
+                            return;
+                        }
+                        if (parentName.includes("drop")) {
+                            intersects[i].object.material.color.set(0xf0ff0d);
+                            // rotateHexa(parseInt(parentName.replace(/[^0-9]/g, "")));
+
+                            return;
+                        }
+                        if (intersects[0].object.name === "ground") {
+                            intersects[i].object.material.color.set(0xff0000);
+                            return;
+                        }
+                        // intersects[i].object.material.color.set(0xff0000);
+                    }
+                }
+            }
+
+            /////////////////////////////////// test
+
+            // const geometry = new THREE.CylinderGeometry(1, 1, 1, 4, 5);
+            // const material = new THREE.MeshStandardMaterial({ color: 0x004fff, wireframe: true });
+            // const cylinder = new THREE.Mesh(geometry, material);
+            // // cylinder.rotation.y = Math.PI * 0.25;
+            // cylinder.position.set(0, 0.5, 5);
+            // cylinder.castShadow = true; //default is false
+            // cylinder.receiveShadow = true; //default
+            // scene.add(cylinder);
+
+            const geometry = new THREE.BufferGeometry();
+            const vertices = new Float32Array([
+                -1.0,
+                0.0,
+                4.0, // v0
+                1.0,
+                0.0,
+                4.0, // v1
+                1.0,
+                2.0,
+                4.0, // v2
+                -1.0,
+                2.0,
+                4.0, // v3
+            ]);
+
+            const indices = [0, 1, 2, 2, 3, 0];
+            geometry.setIndex(indices);
+            geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertices), 3));
+            const material = new THREE.MeshBasicMaterial({ color: 0x004fff, side: THREE.DoubleSide });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            scene.add(mesh);
+            /////////////////////////////////// test
+        </script>
+    </body>
+</html>
