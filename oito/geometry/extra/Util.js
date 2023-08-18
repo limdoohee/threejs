@@ -69,6 +69,7 @@ class Util {
         }
     }
     static fanIndices(out, midIdx, edgeStart, edgeEnd, rev_quad = false) {
+        console.log(out, midIdx, edgeStart, edgeEnd, rev_quad);
         const len = edgeEnd - edgeStart + 1;
         let i, ii;
         for (i = 0; i < len; i++) {

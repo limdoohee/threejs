@@ -3,7 +3,7 @@ import Vec3 from "../Vec3.js";
 import Vec2 from "../Vec2.js";
 import Maths from "../Maths.js";
 class HexagonPillar {
-    static get(pointyUp = true, radius = 0.5, cornerScale = 0.2, cornerDiv = 3, capSize = 0.2, offsetHeight = 0.5) {
+    static get(pointyUp = true, radius = 0.5, cornerScale = 0.2, cornerDiv = 3, capSize = 0.2, offsetHeight = 0.5, x = 0, z = 0) {
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         const rtn = {
             vertices: [],
@@ -12,40 +12,43 @@ class HexagonPillar {
         };
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        let poly = createPolygon(radius, 6, pointyUp ? (30 * Math.PI) / 180 : 0); // Create Base Shape
+        let poly = createPolygon(radius, 6, pointyUp ? (30 * Math.PI) / 180 : 0, x, z); // Create Base Shape
         poly = polyBevel(poly, cornerScale, cornerDiv); // Round the Shape Corners
 
         // Base Layer
         toVec3(rtn, poly);
         const vertCnt = rtn.vertices.length / 3; //console.log( vertCnt );
-
         // Starting layer for Cap.
         toVec3(rtn, poly, [0, offsetHeight, 0]);
 
         // Extra Layers for Bevel
-        polyCapBevel(rtn, poly, cornerDiv, capSize, [0, offsetHeight, 0]);
+        polyCapBevel(rtn, poly, cornerDiv, capSize, [0, 2, 0]);
         const idxTip = rtn.vertices.length;
 
         // Cap Center Point
-        rtn.vertices.push(0, capSize + offsetHeight, 0);
+        rtn.vertices.push(x, capSize + offsetHeight, z);
         rtn.normals.push(0, 1, 0);
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Indices
         const idx = idxTip / 3;
+        // 옆면
         Util.gridIndicesCol(rtn.indices, vertCnt, 2 + cornerDiv, 0, true, true);
-        Util.fanIndices(rtn.indices, idx, idx - vertCnt, idx - 1, true);
+        // 윗면
+        // Util.fanIndices(rtn.indices, idx, idx - vertCnt, idx - 1, true);
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
         return rtn;
     }
 }
 // Create the basic 2d polygon shape
-function createPolygon(radius, sides = 6, offset = 0) {
+function createPolygon(radius, sides = 6, offset = 0, x, z) {
+    // console.log(x, z);
     const poly = [];
     let i, rad;
     for (i = 0; i < sides; i++) {
         rad = Math.PI * 2 * (i / sides);
-        poly.push(Math.cos(rad + offset) * radius, Math.sin(rad + offset) * radius);
+        poly.push(Math.cos(rad + offset) * radius + x, Math.sin(rad + offset) * radius + z);
     }
     return poly;
 }
@@ -67,8 +70,8 @@ function polyBevel(poly, cornerScale = 0.2, cornerDiv = 3) {
 
     let ii, i, j, k, radius;
     for (j = 0; j < len; j++) {
-        i = Maths.mod(j - 1, len); // Previous Point
-        k = Maths.mod(j + 1, len); // Next Point
+        i = Maths.mod(j - 1.0, len); // Previous Point
+        k = Maths.mod(j + 1.0, len); // Next Point
 
         a.fromBuf(poly, i * 2); // Get the Point Positions out of flat buffer
         b.fromBuf(poly, j * 2);
@@ -108,6 +111,7 @@ function toVec3(geo, poly, offset) {
 }
 // Create a Beveled cap for the extruded walls
 function polyCapBevel(geo, poly, cornerDiv, capSize, offset) {
+    console.log(geo, poly, cornerDiv, capSize, offset);
     const v = new Vec2();
     const lerp = [];
     let pivot, top, pnt, i, vlen, tlen;
@@ -133,6 +137,7 @@ function polyCapBevel(geo, poly, cornerDiv, capSize, offset) {
         for (itm of lerp) {
             pnt.fromLerp(itm.pnt, itm.top, t).sub(itm.pivot).norm().pushTo(geo.normals).scale(capSize).add(itm.pivot).add(offset).pushTo(geo.vertices);
         }
+        // console.log(pnt);
     }
 }
 

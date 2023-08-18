@@ -1,376 +1,336 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
     <head>
+        <meta charset="utf-8" />
         <title></title>
-        <link href="./test.css" rel="stylesheet" />
+        <style>
+            body {
+                overflow: hidden;
+                margin: 0;
+            }
+
+            .userInfo {
+                position: absolute;
+                width: 90vw;
+                height: 6vh;
+                background: #fff;
+                border-radius: 10px;
+                top: 25vw;
+                left: 5vw;
+                transition: all 0.5s ease-in-out;
+            }
+
+            .detail {
+                position: fixed;
+                width: 100vw;
+                height: 100vh;
+                background-color: rgba(255, 255, 255, 0.5);
+                top: 120vh;
+                left: 0;
+                transition: all 0.5s ease-in-out;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+
+            .detail.more {
+                background-color: rgba(255, 255, 255, 0.5);
+                transition: all 0.5s ease-in-out;
+            }
+
+            .detail .hold {
+                background-color: #fd6e24;
+                color: #fff;
+                font-size: 12px;
+                font-weight: 400;
+                line-height: 12px;
+                letter-spacing: -0.02em;
+                text-align: left;
+                border-radius: 4px;
+                padding: 6px 8px;
+            }
+
+            .detail .artist span {
+                font-size: 16px;
+                font-weight: 700;
+                line-height: 16px;
+                letter-spacing: -0.02em;
+                text-align: left;
+            }
+
+            .detail .dropNo {
+                font-size: 14px;
+                font-weight: 400;
+                line-height: 14px;
+                letter-spacing: -0.02em;
+                text-align: left;
+            }
+
+            .detail .artName {
+                font-size: 20px;
+                font-weight: 700;
+                line-height: 26px;
+                letter-spacing: -0.03em;
+                text-align: left;
+            }
+
+            .detail .owner {
+                font-size: 20px;
+                font-weight: 700;
+                line-height: 26px;
+                letter-spacing: -0.03em;
+                text-align: left;
+            }
+
+            .detail .more {
+                font-size: 14px;
+                font-weight: 400;
+                line-height: 14px;
+                letter-spacing: -0.02em;
+                text-align: left;
+                color: #fd6e24;
+            }
+
+            .detail .bottom {
+                /* position: fixed;
+                bottom: 0;
+                border: 1px solid red;
+                width: 100%;
+                margin-bottom: 34px; */
+            }
+        </style>
     </head>
     <body>
-        <div class="wrapper"></div>
-        <div class="avatar"></div>
+        <div class="userInfo">
+            Collectorman
+            <button>button test</button>
+        </div>
+        <canvas id="drop"></canvas>
+        <div class="detail">
+            <div class="hold"><button>보유중</button></div>
+            <div class="wrapper">
+                <div class="info">
+                    <div class="artist">
+                        <img src="" />
+                        <span>abcdefghijklmnopqrst</span>
+                    </div>
+                    <h6 class="dropNo">Drop #1</h6>
+                    <h4 class="artName">A SWEET DAY</h4>
+                    <div class="owner">Owner 1024</div>
+                    <div class="more" onclick="test()">MORE INFO</div>
+                </div>
+                <div class="bottom">
+                    <button>OPEN</button>
+                </div>
+            </div>
+        </div>
+        <script>
+            function test(e) {
+                alert("ddd");
+                document.querySelector(".more").innerHTML =
+                    "작품설명  작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명";
+            }
+        </script>
         <script type="module">
             import * as THREE from "three";
-            import HexagonPillar from "./oito/geometry/HexagonPillar.js";
-            import { OrbitControls } from "three/addons/controls/OrbitControls.js";
             import { MapControls } from "three/addons/controls/MapControls.js";
             import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 
-            const scene = new THREE.Scene();
-            const scene2 = new THREE.Scene();
-            let camera,
-                camera2 = null;
-            let renderer,
-                avatar = null;
-            let controls,
-                controls2 = null;
-            let posArray = [];
+            import gsap from "gsap";
 
+            const scene = new THREE.Scene();
+            let camera, renderer, controls;
+
+            const space = new THREE.Group();
             const loader = new FBXLoader();
+            const mixers = [];
             let mixer = new THREE.AnimationMixer();
             let clock = new THREE.Clock();
 
+            let profileArea;
+            let detailArea;
+
+            const dropData = [
+                {
+                    id: 0,
+                    url: "data/DoCoin_LinearSpin.fbx",
+                    bumpMap: "data/DSP_DoCoin.png",
+                    colorMap: "data/D_DoCoin.png",
+                    specularMap: "data/SPC_DoCoin.png",
+                    my: false,
+                    detail: {
+                        artistImg: "data/image_17.png",
+                        artistName: "abcdefghijklmnopqrst",
+                        artName: "A SWEET DAY",
+                        owner: 1024,
+                        artDesc:
+                            "작품설명  작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 작품설명 ",
+                    },
+                },
+                {
+                    id: 1,
+                    url: "data/KominJeong_Popup.fbx",
+                    bumpMap: "data/DSP_outside_KominJeong.png",
+                    colorMap: "data/D_outside_KominJeong.png",
+                    // url: "",
+                    my: true,
+                },
+                {
+                    id: 2,
+                    // url: "data/DoCoin_Static.fbx",
+                    url: "",
+                    my: false,
+                },
+                {
+                    id: 3,
+                    url: "data/275C_LinearSpin.fbx",
+                    colorMap: "data/D_275C.png", // url: "",
+                    my: false,
+                },
+                {
+                    id: 4,
+                    // url: "data/KominJeong_Popup.fbx",
+                    url: "",
+                    my: false,
+                },
+                {
+                    id: 5,
+                    // url: "data/KominJeong_Static.fbx",
+                    url: "",
+                    my: false,
+                },
+                {
+                    id: 6,
+                    url: "data/275C_LinearSpin.fbx",
+                    colorMap: "data/D_275C.png",
+                    my: false,
+                },
+                {
+                    id: 7,
+                    url: "",
+                    my: false,
+                },
+                {
+                    id: 8,
+                    url: "",
+                    my: false,
+                },
+            ];
+
             init();
-            ground();
-            hexaGrid(3);
-            setAvatar();
+            setSpace();
             setDrop();
             render();
 
             // scene.add(new THREE.GridHelper(20, 20, 0xff80ed, 0x444444));
 
             function init() {
+                const canvas = document.getElementById("drop");
+                profileArea = document.querySelector(".userInfo");
+                detailArea = document.querySelector(".detail");
+
                 // render hive
-                renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+                // renderer.setPixelRatio(window.devicePixelRatio);
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-                document.querySelector(".wrapper").appendChild(renderer.domElement);
+                // document.querySelector(".wrapper").appendChild(renderer.domElement);
+
+                const lastDrop = dropData.findLast((e) => e.my === true);
 
                 // camera
-                camera = new THREE.PerspectiveCamera(12, window.innerWidth / window.innerHeight, 0.01, 1000);
-                camera.position.set(30, 38, 30);
-                camera.lookAt(new THREE.Vector3(0, 0, 0));
+                camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 0.01, 1000);
+                camera.position.set(lastDrop.id * 2.5, 4, 10);
+                // camera.position.set(0, 5, 0);
 
                 // light
                 let light = new THREE.DirectionalLight(0xffffff, 1);
-                light.position.set(5, 5, 5);
-                light.castShadow = true;
-                light.shadow.mapSize.width = 1042;
-                light.shadow.mapSize.height = 1042;
-                scene.add(light);
-                scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+                light.position.set(10, 7, 0);
+                // light.castShadow = true;
+                // scene.add(light);
                 // scene.add(new THREE.DirectionalLightHelper(light, 1, "red"));
+                scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+                const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+                pointLight.position.set(7, 10, 0);
+                // pointLight.castShadow = true;
+                // pointLight.shadow.mapSize.width = 2048;
+                // pointLight.shadow.mapSize.height = 2048;
+                scene.add(pointLight);
+                const sphereSize = 1;
+                const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
+                scene.add(pointLightHelper);
 
                 // controls
                 controls = new MapControls(camera, renderer.domElement);
-                controls.target.fromArray([0, 0, 0]);
+                controls.target = new THREE.Vector3(lastDrop.id * 2.5, 3, 0);
+                controls.touches = { ONE: THREE.TOUCH.PAN };
+                controls.minDistance = 4;
+                controls.maxDistance = 20;
+                controls.enableRotate = false;
                 controls.update();
 
-                // render avatar
-                avatar = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-                avatar.setPixelRatio(window.devicePixelRatio);
-                avatar.setSize(window.innerWidth, window.innerHeight);
-                avatar.shadowMap.enabled = true;
-                avatar.shadowMap.type = THREE.PCFSoftShadowMap;
-                document.querySelector(".avatar").appendChild(avatar.domElement);
+                // Limits;
+                const maxX = (dropData.length - 1) * 2.5;
+                const minX = 0;
+                const maxZ = 2;
+                const minZ = 0;
 
-                // camera
-                camera2 = new THREE.PerspectiveCamera(20, window.innerWidth / window.innerHeight, 0.01, 1000);
-                camera2.position.set(0, 0, 15);
-                camera2.zoom = 0.5;
+                // State
+                let positionX;
+                let positionZ;
+                let phi;
+                let theta;
 
-                // light
-                let light2 = new THREE.DirectionalLight(0xffffff, 1);
-                light2.position.set(5, 5, 5);
-                light2.castShadow = true;
-                light2.shadow.mapSize.width = 1042;
-                light2.shadow.mapSize.height = 1042;
-                scene2.add(light2);
-                scene2.add(new THREE.AmbientLight(0xffffff, 0.3));
-                scene2.add(new THREE.DirectionalLightHelper(light2, 1, "red"));
+                controls.addEventListener("change", (e) => {
+                    const x = controls.target.x;
+                    const z = controls.target.z;
+                    let shallWeUpdateAngle = false;
 
-                // controls
-                // controls2 = new MapControls(camera2, avatar.domElement);
-                // controls2.target.fromArray([0, 0, 0]);
-                // controls2.update();
+                    if (x < minX || x > maxX) {
+                        controls.target.setX(x < minX ? minX : maxX);
+                        camera.position.setX(positionX);
+                        shallWeUpdateAngle = true;
+                    }
+                    if (z < minZ || z > maxZ) {
+                        controls.target.setZ(z < minZ ? minZ : maxZ);
+                        camera.position.setZ(positionZ);
+                        shallWeUpdateAngle = true;
+                    }
+
+                    if (shallWeUpdateAngle) {
+                        const distance = camera.position.distanceTo(controls.target);
+                        camera.position.set(distance * Math.sin(phi) * Math.sin(theta) + controls.target.x, distance * Math.cos(phi) + controls.target.y, distance * Math.sin(phi) * Math.cos(theta) + controls.target.z);
+                    }
+
+                    // Updating state
+                    positionX = camera.position.x;
+                    positionZ = camera.position.z;
+                    phi = controls.getPolarAngle();
+                    theta = controls.getAzimuthalAngle();
+                });
 
                 window.addEventListener("click", clickEvent);
-            }
 
-            function ground() {
-                const geo = new THREE.PlaneGeometry(20, 20);
-                const mat = new THREE.MeshStandardMaterial({
-                    color: "#ffffff",
-                    side: THREE.DoubleSide,
-                    opacity: 0.5,
-                    transparent: true,
-                });
-                // shadow blur
-                //https://github.com/mrdoob/three.js/blob/master/examples/webgl_shadow_contact.html
-
-                const ground = new THREE.Mesh(geo, mat);
-                ground.rotation.x = Math.PI * 0.5;
-                ground.receiveShadow = true;
-                scene.add(ground);
-            }
-
-            function hexaGrid(n) {
-                const VERT_SRC = `#version 300 es
-                                                in vec3 position;
-                                                in vec3 normal;
-                                                in vec3 i_pos;
-
-                                                uniform mat4 viewMatrix;
-                                                uniform mat3 normalMatrix;
-                                                uniform mat4 projectionMatrix;
-
-                                                out vec3 frag_wpos;
-                                                out vec3 frag_norm;
-                                                out vec3 frag_color;
-
-                                                ///////////////////////////////////////////////////////////////////////////////
-
-                                                uniform int   UOctave;//       = 2;
-                                                uniform float UPeriod;//       = 0.3;
-                                                uniform float UPeriodFreq;//   = 2.0;
-                                                uniform float UFalloff;//      = 2.0;
-                                                uniform float UVox;//          = 0.0;
-
-                                                ///////////////////////////////////////////////////////////////////////////////
-
-                                                vec3 rgb( int c ){
-                                                    return vec3(
-                                                        float( ( c >> 16 ) & 0xff ) * 0.003,
-                                                        float( ( c >> 8 ) & 0xff ) * 0.003,
-                                                        float( c & 0xff ) * 0.003
-                                                    );
-                                                }
-
-                                                ///////////////////////////////////////////////////////////////////////////////
-
-                                                void main(){
-                                                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                                                    // HEIGHT MAP
-                                                    vec3 pos = position;
-                                                    pos += i_pos;                                                   // Move to Instanced Position
-
-                                                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                                                    // RESULTS
-                                                    vec4 ws_pos	= vec4( pos, 1.0 );
-
-                                                    frag_wpos   = ws_pos.xyz;
-                                                    frag_norm   = normalMatrix * normal;
-                                                    frag_color  = rgb(0xffffff);
-
-                                                    gl_Position	= projectionMatrix * viewMatrix * vec4( pos, 1.0 );
-                                                }
-                                                `;
-
-                const FRAG_SRC = `#version 300 es
-                                            precision mediump float;
-
-                                            out vec4 out_color;
-
-                                            in vec3 frag_wpos;
-                                            in vec3 frag_norm;
-                                            in vec3 frag_color;
-
-                                            uniform vec3 cameraPosition;
-                                            uniform vec3 color;
-
-                                            ///////////////////////////////////////////////////////////////////////////////
-
-                                            #define RECIPROCAL_PI 0.3183098861837907
-                                            #define saturate( a ) clamp( a, 0.0, 1.0 )
-
-                                            vec3 F_Schlick( const in vec3 f0, const in float f90, const in float dotVH ) {
-                                                float fresnel = exp2( ( - 5.55473 * dotVH - 6.98316 ) * dotVH );
-                                                return f0 * ( 1.0 - fresnel ) + ( f90 * fresnel );
-                                            }
-
-                                            float D_BlinnPhong( const in float shininess, const in float dotNH ) {
-                                                return RECIPROCAL_PI * ( shininess * 0.5 + 1.0 ) * pow( dotNH, shininess );
-                                            }
-
-                                            vec3 BRDF_Lambert( const in vec3 diffuseColor ){ return RECIPROCAL_PI * diffuseColor; }
-
-                                            vec3 BRDF_BlinnPhong( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float shininess ) {
-                                                vec3 halfDir    = normalize( lightDir + viewDir );
-                                                float dotNH     = saturate( dot( normal, halfDir ) );
-                                                float dotVH     = saturate( dot( viewDir, halfDir ) );
-                                                vec3 F          = F_Schlick( specularColor, 1.0, dotVH );
-                                                float G         = 0.25; // It only outputs a constant - G_BlinnPhong_Implicit();
-                                                float D         = D_BlinnPhong( shininess, dotNH );
-
-                                                //return F * ( G * D );
-                                                return F * G; // D Causes the big Spot light kind of thing to appear
-                                            }
-
-                                            ///////////////////////////////////////////////////////////////////////////////
-
-                                            void main(){
-                                                // STRIPPED DOWN MeshPhongMaterial ( Prob screwed up somewhere )
-
-                                                vec3 baseColor          = frag_color; //color;
-
-                                                vec3 lightPos           = vec3( 0.0, 10.0, 6.0 );
-                                                vec3 lightColor         = vec3( 1.0 );
-                                                vec3 lightDir           = normalize( lightPos - frag_wpos );
-
-                                                vec3  viewDir           = normalize( cameraPosition - frag_wpos );
-                                                vec3  norm              = normalize( frag_norm );
-                                                float dotNL             = saturate( dot( norm, lightDir ) );
-
-                                                vec3 indirectDiffuse    = vec3( 0.1 );
-                                                vec3 directDiffuse      = vec3( 0.0 );
-                                                vec3 directSpecular     = vec3( 0.0 );
-
-                                                vec3 specularColor      = vec3( 1.0 );
-                                                float specularShininess = 400.0;
-                                                float specularStrength  = 1.0;
-
-                                                vec3 ambientLightColor  = vec3( 2.5 );
-                                                vec3 irradiance         = dotNL * lightColor;
-
-                                                directDiffuse           += irradiance * BRDF_Lambert( baseColor );
-                                                directSpecular          += irradiance * BRDF_BlinnPhong( lightDir, viewDir, norm, specularColor, specularShininess ) * specularStrength;
-                                                indirectDiffuse         += ambientLightColor * BRDF_Lambert( baseColor );
-
-                                                out_color.rgb           = directDiffuse + indirectDiffuse + directSpecular;
-                                                out_color.a             = 1.0;
-
-                                            }`;
-                let x, y, yn, p;
-
-                const geo = HexagonPillar.get(false, 1, 0.03, 1, 0.07, 0.5);
-
-                const mat = new THREE.RawShaderMaterial({
-                    vertexShader: VERT_SRC,
-                    fragmentShader: FRAG_SRC,
-                    transparent: true,
-                    side: THREE.DocbleSide,
-                    // wireframe: true,
-                });
-
-                const SQRT3 = Math.sqrt(3.0);
-                const axialToPixel = (ax, ay) => {
-                    const x = 1.5 * ax + 0 * ay;
-                    const y = (SQRT3 / 2.0) * ax + SQRT3 * ay;
-
-                    return [x, y];
-                };
-
-                for (x = -n; x <= n; x++) {
-                    y = Math.max(-n, -x - n);
-                    yn = Math.min(n, -x + n);
-
-                    for (y; y <= yn; y++) {
-                        p = axialToPixel(x, y);
-                        const coord = [];
-                        const pos = [];
-                        pos.push(p[0], 0, p[1]);
-                        posArray.push(p[0], 0, p[1]);
-                        pos.push(-1.5, 0, -0.8660254037844386);
-                        // coord.push(-1, 0, -1, 1);
-                        // console.log(pos, coord);
-
-                        //-1.5, 0, -0.8660254037844386
-                        //, -1.5, 0, 0.8660254037844386
-                        //, 0, 0, -1.7320508075688772
-                        //, 0, 0, 0
-                        //, 0, 0, 1.7320508075688772
-                        //, 1.5, 0, -0.8660254037844386
-                        //, 1.5, 0, 0.8660254037844386
-                        // -1, 0, -1, 1, 0, -1, 0, 0, 0, 1, 1, -1, 1, 0
-
-                        const inst_pos = new Float32Array(pos);
-
-                        // console.log(inst_pos);
-                        // console.log(geo.vertices);
-                        const bGeo = new THREE.BufferGeometry();
-                        bGeo.setIndex(geo.indices);
-                        bGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(geo.vertices), 3));
-                        bGeo.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(geo.normals), 3));
-                        bGeo.setAttribute("i_pos", new THREE.InstancedBufferAttribute(inst_pos, 3));
-                        const material = new THREE.MeshStandardMaterial({ color: 0x004fff });
-
-                        let mesh = new THREE.Mesh(bGeo, mat);
-                        mesh.name = "ground";
-                        mesh.castShadow = true;
-                        mesh.receiveShadow = true;
-
-                        scene.add(mesh);
-                    }
-                }
-                // console.log(posArray);
-            }
-
-            function setDrop() {
-                const temp_drops = [{ url: "data/coin.fbx" }];
-                // temp_drops.forEach((drop, dropInd) => {
-                //     loader.load(drop.url, (object) => {
-                //         object.scale.multiplyScalar(0.03);
-                //         object.position.set(hexaCore[dropInd].position.x, hexaCore[dropInd].position.y + 4, hexaCore[dropInd].position.z);
-                //         object.name = "drop" + dropInd;
-                //         scene.add(object);
-
-                //         clock = new THREE.Clock();
-                //     });
-
-                // });
-
-                for (let i = 0; i < 35; i++) {
-                    loader.load("data/Tree low.FBX", (object) => {
-                        object.scale.multiplyScalar(0.01);
-                        object.position.set(posArray[3 * i], 0.2, posArray[3 * i + 2]);
-                        // console.log();
-                        object.name = "drop" + i;
-
-                        object.traverse(function (child) {
-                            if (child.isMesh) {
-                                child.castShadow = true;
-                                child.receiveShadow = true;
-                            }
-                        });
-                        object.name = "drop" + i;
-
-                        scene.add(object);
-
-                        // clock = new THREE.Clock();
+                // 첫 로딩시, 화면 줌인
+                setTimeout(() => {
+                    gsap.to(camera, {
+                        fov: 50,
+                        duration: 1,
+                        ease: "power4.inOut",
+                        onUpdate: function () {
+                            camera.updateProjectionMatrix();
+                        },
                     });
-                }
+                }, 300);
             }
 
-            function animate() {
-                const delta = clock.getDelta();
-                if (mixer) mixer.update(delta);
-            }
-
-            function render() {
-                animate();
-                requestAnimationFrame(render);
-                renderer.render(scene, camera);
-                avatar.render(scene2, camera2);
-            }
-
-            function setAvatar() {
-                loader.load("data/Standing Greeting.fbx", (object) => {
-                    object.scale.multiplyScalar(0.015);
-                    // object.position.set(-2, 0, -4);
-
-                    mixer = new THREE.AnimationMixer(object);
-                    const action = mixer.clipAction(object.animations[0]);
-                    action.play();
-                    object.name = "avatar";
-                    scene2.add(object);
-
-                    clock = new THREE.Clock();
-                });
-            }
-
-            let parentName;
+            let beforePosition = -1;
+            let column;
+            let clickDrop;
             function clickEvent(event) {
-                let parentName;
+                let parent;
                 const raycaster = new THREE.Raycaster();
                 const pointer = new THREE.Vector2();
 
@@ -380,65 +340,214 @@
                 raycaster.setFromCamera(pointer, camera);
 
                 const intersects = raycaster.intersectObjects(scene.children);
-
-                console.log(scene.children, intersects, intersects[0]);
+                // console.log(intersects);
+                // console.log(intersects);
                 if (intersects.length > 0) {
-                    parentName = intersects[0].object.parent.name;
-                    for (let i = 0; i < intersects.length; i++) {
-                        if (parentName === "avatar") {
-                            intersects[i].object.material.color.set(0x141d80);
-                            return;
-                        }
-                        if (parentName.includes("drop")) {
-                            intersects[i].object.material.color.set(0xf0ff0d);
-                            // rotateHexa(parseInt(parentName.replace(/[^0-9]/g, "")));
+                    parent = intersects[0].object.parent;
+                    // if (intersects[0].object.name === "button") alert("button");
+                    // console.log(intersects[0].object.position);
 
-                            return;
-                        }
-                        if (intersects[0].object.name === "ground") {
-                            intersects[i].object.material.color.set(0xff0000);
-                            return;
-                        }
-                        // intersects[i].object.material.color.set(0xff0000);
+                    // console.log(column);
+                    if (parent.name.includes("drop")) {
+                        clickDrop = intersects[0].object.material;
+                        gsap.to(clickDrop, {
+                            duration: 1,
+                            opacity: 1,
+                            // map: new THREE.TextureLoader().load("data/D_275C.png"),
+                            ease: "power3.inOut",
+                        });
+                        gsap.to(clickDrop, {
+                            duration: 0.5,
+                            wireframe: false,
+                            ease: "power3.inOut",
+                        });
+
+                        detailArea.style.top = 0;
+                        profileArea.style.opacity = 0;
+                        column = scene.getObjectByName("column" + parent.name.replace(/[^0-9]/g, ""));
+                        gsap.to(column.material, {
+                            duration: 1,
+                            opacity: 0,
+                            ease: "power3.inOut",
+                        });
+
+                        gsap.to(controls.target, {
+                            duration: 1,
+                            x: parent.position.x,
+                            y: 3,
+                            ease: "power3.inOut",
+                            onUpdate: function () {
+                                controls.update();
+                            },
+                        });
+                        gsap.to(camera.position, {
+                            // delay: 1,
+                            duration: 1,
+                            ease: "power3.inOut",
+                            x: parent.position.x,
+                            y: 3.3,
+                            z: 3,
+                            onUpdate: function () {
+                                controls.update();
+                            },
+                        });
+
+                        beforePosition = parent.position.x;
+                        controls.enabled = false;
+                    }
+
+                    // if (beforePosition > -1 && intersects[0].object.name === "") {
+                    //     gsap.to(clickDrop, {
+                    //         duration: 1,
+                    //         opacity: 0.3,
+                    //         ease: "power3.inOut",
+                    //     });
+
+                    //     gsap.to(clickDrop, {
+                    //         duration: 0.5,
+                    //         wireframe: true,
+                    //         ease: "power3.inOut",
+                    //     });
+
+                    //     detailArea.style.top = "120vh";
+                    //     profileArea.style.opacity = 1;
+                    //     gsap.to(column.material, {
+                    //         duration: 1,
+                    //         opacity: 1,
+                    //         ease: "power3.inOut",
+                    //     });
+
+                    //     gsap.to(controls.target, {
+                    //         duration: 1,
+                    //         x: beforePosition,
+                    //         // y: 3,
+                    //         // z: 0,
+                    //         // ease: "power4.in",
+                    //         ease: "power3.inOut",
+                    //         onUpdate: function () {
+                    //             controls.update();
+                    //         },
+                    //     });
+                    //     gsap.to(camera.position, {
+                    //         // delay: 1,
+                    //         duration: 1,
+                    //         ease: "power3.inOut",
+                    //         x: beforePosition,
+                    //         y: 4,
+                    //         z: 10,
+                    //         onUpdate: function () {
+                    //             controls.update();
+                    //         },
+                    //     });
+
+                    //     beforePosition = -1;
+                    //     controls.enabled = true;
+                    // }
+                }
+            }
+
+            function setSpace() {
+                // 바닥
+                const geo = new THREE.PlaneGeometry(40, 30);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: "#F5F5F5",
+                    side: THREE.DoubleSide,
+                });
+                // shadow blur
+                //https://github.com/mrdoob/three.js/blob/master/examples/webgl_shadow_contact.html
+                const ground = new THREE.Mesh(geo, mat);
+                ground.position.z = 5;
+                ground.rotation.x = Math.PI * 0.5;
+                // ground.receiveShadow = true;
+
+                // 벽
+                const wall = new THREE.Mesh(geo, mat);
+                wall.position.z = -5;
+
+                // 천장
+                const roof = new THREE.Mesh(geo, mat);
+                roof.rotation.x = Math.PI * 0.5;
+                roof.position.y = 8;
+
+                space.add(ground);
+                space.add(wall);
+                space.add(roof);
+                space.position.x = 15;
+                scene.add(space);
+            }
+
+            function setDrop() {
+                const geo = new THREE.BoxGeometry(1.5, 2, 1.5);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: "#ffffff",
+                    transparent: true,
+                });
+
+                for (let i = 0; i < dropData.length; i++) {
+                    const group = new THREE.Group();
+                    // column
+                    const column = new THREE.Mesh(geo, mat);
+                    column.receiveShadow = true;
+                    column.position.x = i * 2.5;
+                    column.position.y = 1;
+                    column.name = "column" + i;
+                    scene.add(column);
+
+                    if (dropData[i].url) {
+                        loader.load(dropData[i].url, (obj) => {
+                            // const drop = new THREE.Group();
+                            obj.scale.multiplyScalar(0.05);
+                            obj.position.x = i * 2.5;
+                            obj.position.y = 2.5;
+                            obj.traverse(function (child) {
+                                if (child.isMesh) {
+                                    let color1, colorMap, bumpMap, specularMap, wireframe, opacity;
+                                    colorMap = new THREE.TextureLoader().load(dropData[i].colorMap);
+                                    bumpMap = new THREE.TextureLoader().load(dropData[i].bumpMap);
+                                    specularMap = new THREE.TextureLoader().load(dropData[i].specularMap);
+                                    if (dropData[i].my) {
+                                        opacity = 1;
+                                        wireframe = false;
+                                    } else {
+                                        opacity = 0.3;
+                                        wireframe = true;
+                                    }
+                                    const minigunMaterial = new THREE.MeshPhongMaterial({
+                                        map: colorMap,
+                                        bumpMap,
+                                        specularMap,
+                                        transparent: true,
+                                        // opacity: opacity,
+                                        wireframe,
+                                    });
+
+                                    child.material = minigunMaterial;
+                                    child.castShadow = true;
+                                    child.receiveShadow = true;
+                                }
+                            });
+                            obj.name = "drop" + i;
+
+                            mixer = new THREE.AnimationMixer(obj);
+                            const action = mixer.clipAction(obj.animations[0]).play();
+                            mixers.push(mixer);
+
+                            scene.add(obj);
+                        });
                     }
                 }
             }
 
-            /////////////////////////////////// test
+            function animate() {
+                const delta = clock.getDelta();
+                for (const mixer of mixers) mixer.update(delta);
+            }
 
-            // const geometry = new THREE.CylinderGeometry(1, 1, 1, 4, 5);
-            // const material = new THREE.MeshStandardMaterial({ color: 0x004fff, wireframe: true });
-            // const cylinder = new THREE.Mesh(geometry, material);
-            // // cylinder.rotation.y = Math.PI * 0.25;
-            // cylinder.position.set(0, 0.5, 5);
-            // cylinder.castShadow = true; //default is false
-            // cylinder.receiveShadow = true; //default
-            // scene.add(cylinder);
-
-            // const geometry = new THREE.BufferGeometry();
-            // const vertices = new Float32Array([
-            //     -1.0,
-            //     0.0,
-            //     4.0, // v0
-            //     1.0,
-            //     0.0,
-            //     4.0, // v1
-            //     1.0,
-            //     2.0,
-            //     4.0, // v2
-            //     -1.0,
-            //     2.0,
-            //     4.0, // v3
-            // ]);
-
-            // const indices = [0, 1, 2, 2, 3, 0];
-            // geometry.setIndex(indices);
-            // geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertices), 3));
-            // const material = new THREE.MeshBasicMaterial({ color: 0x004fff, side: THREE.DoubleSide });
-            // const mesh = new THREE.Mesh(geometry, material);
-            // mesh.castShadow = true;
-            // scene.add(mesh);
-            /////////////////////////////////// test
+            function render() {
+                animate();
+                requestAnimationFrame(render);
+                renderer.render(scene, camera);
+            }
         </script>
     </body>
 </html>

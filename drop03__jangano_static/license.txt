@@ -1,0 +1,11 @@
+Model Information:
+* title:	Drop03_ Jangano_STATIC
+* source:	https://sketchfab.com/3d-models/drop03--jangano-static-32323012b3a446d2baac873ab6365429
+* author:	xxblue (https://sketchfab.com/xxblue)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Drop03_ Jangano_STATIC" (https://sketchfab.com/3d-models/drop03--jangano-static-32323012b3a446d2baac873ab6365429) by xxblue (https://sketchfab.com/xxblue) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

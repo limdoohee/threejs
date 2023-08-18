@@ -1,5 +1,9 @@
 {
   "dependencies": {
+    "gltf-optimizer": "^0.4.0",
+    "gltf-pipeline": "^4.1.0",
+    "gsap": "^3.11.5",
+    "imagemin-webp": "^8.0.0",
     "three": "^0.152.2"
   },
   "devDependencies": {

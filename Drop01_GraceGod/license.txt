@@ -1,0 +1,11 @@
+Model Information:
+* title:	Drop01_GraceGod
+* source:	https://sketchfab.com/3d-models/drop01-gracegod-f6247851caee443ba3ef0dac5c9dd1a8
+* author:	xxblue (https://sketchfab.com/xxblue)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Drop01_GraceGod" (https://sketchfab.com/3d-models/drop01-gracegod-f6247851caee443ba3ef0dac5c9dd1a8) by xxblue (https://sketchfab.com/xxblue) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
